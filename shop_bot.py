@@ -25,7 +25,7 @@ if not BOT_TOKEN:
     raise ValueError("❌ Токен не найден! Добавьте BOT_TOKEN в переменные окружения Bothost.")
 
 ADMIN_ID = 439446887
-CHANNEL_ID = "@RusskiyTAY"
+CHANNEL_ID = "@test_shop654"
 DELIVERY_COST = 300
 FREE_DELIVERY_THRESHOLD = 2000
 PICKUP_ADDRESS = "Нижний Новгород ул. Профинтерна д.26"
@@ -346,7 +346,8 @@ def get_subcategories_keyboard(category_name: str, is_admin=False):
         keyboard.add(KeyboardButton("↩️ К категориям"), KeyboardButton("🏠 В начало"))
     return keyboard
 
-def get_product_keyboard(product_id: str, product_data: dict, show_cart_button: bool = False, is_admin: bool = False):
+# ИСПРАВЛЕНО: убрана кнопка "Перейти в корзину"
+def get_product_keyboard(product_id: str, product_data: dict, is_admin: bool = False):
     keyboard = InlineKeyboardMarkup(row_width=1)
     if is_admin:
         keyboard.add(
@@ -365,8 +366,7 @@ def get_product_keyboard(product_id: str, product_data: dict, show_cart_button: 
             keyboard.add(
                 InlineKeyboardButton("🔔 Уведомить о появлении", callback_data=f"notify_{product_id}")
             )
-        if show_cart_button:
-            keyboard.add(InlineKeyboardButton("🛒 Перейти в корзину", callback_data="go_to_cart"))
+        # Кнопка "Перейти в корзину" УДАЛЕНА
     return keyboard
 
 def get_cart_keyboard(cart_items):
@@ -699,6 +699,26 @@ async def show_catalog(message: types.Message):
         reply_markup=get_categories_keyboard(is_admin=is_admin)
     )
 
+@dp.message_handler(text="↩️ К категориям")
+async def back_to_categories(message: types.Message):
+    """Возврат к списку категорий из подкатегорий"""
+    is_admin = (message.from_user.id == ADMIN_ID)
+    await message.answer(
+        "📂 <b>Выберите категорию:</b>",
+        parse_mode="HTML",
+        reply_markup=get_categories_keyboard(is_admin=is_admin)
+    )
+
+@dp.message_handler(text="↩️ Назад")
+async def go_back(message: types.Message):
+    """Возврат из категорий в каталог"""
+    is_admin = (message.from_user.id == ADMIN_ID)
+    await message.answer(
+        "📂 <b>Каталог:</b>",
+        parse_mode="HTML",
+        reply_markup=get_categories_keyboard(is_admin=is_admin)
+    )
+
 @dp.message_handler(lambda m: m.text in CATEGORIES.keys())
 async def show_category(message: types.Message):
     category = CATEGORIES.get(message.text)
@@ -740,10 +760,16 @@ async def show_products(message: types.Message):
                 product['photo'],
                 caption=caption,
                 parse_mode="HTML",
-                reply_markup=get_product_keyboard(product['id'], product, show_cart_button=not is_admin, is_admin=is_admin)
+                # ИСПРАВЛЕНО: убран параметр show_cart_button
+                reply_markup=get_product_keyboard(product['id'], product, is_admin=is_admin)
             )
         else:
-            await message.answer(caption, parse_mode="HTML", reply_markup=get_product_keyboard(product['id'], product, show_cart_button=not is_admin, is_admin=is_admin))
+            await message.answer(
+                caption, 
+                parse_mode="HTML", 
+                # ИСПРАВЛЕНО: убран параметр show_cart_button
+                reply_markup=get_product_keyboard(product['id'], product, is_admin=is_admin)
+            )
         if not is_admin:
             increment_product_view(product['id'])
     except Exception as e:
@@ -827,7 +853,8 @@ async def add_to_cart(call: types.CallbackQuery):
         current_quantity = 1
     save_data()
     await call.answer(f"✅ {product.get('subcategory', 'Товар')} добавлен в корзину! 📦 В корзине: {current_quantity} шт.", show_alert=False)
-    new_keyboard = get_product_keyboard(product_id, product, show_cart_button=True, is_admin=False)
+    # ИСПРАВЛЕНО: убран параметр show_cart_button
+    new_keyboard = get_product_keyboard(product_id, product, is_admin=False)
     try:
         if call.message.photo:
             await call.message.edit_caption(
@@ -1037,16 +1064,6 @@ async def clear_cart_callback(call: types.CallbackQuery):
     save_data()
     await call.answer("🗑️ Корзина очищена", show_alert=False)
     await call.message.answer("🛒 Корзина пуста")
-
-@dp.callback_query_handler(lambda c: c.data == "go_to_cart")
-async def go_to_cart_callback(call: types.CallbackQuery):
-    user_id = str(call.from_user.id)
-    cart = user_carts.get(user_id, [])
-    if not cart:
-        await call.answer("🛒 Ваша корзина пуста.", show_alert=True)
-        return
-    await show_cart(call.message)
-    await call.answer()
 
 # ==================== ОФОРМЛЕНИЕ ЗАКАЗА ====================
 @dp.callback_query_handler(lambda c: c.data == "checkout")
@@ -2533,7 +2550,4 @@ if __name__ == '__main__':
         print("\n🛑 Бот остановлен")
     except Exception as e:
         print(f"❌ Ошибка: {e}")
-
-
-
 
