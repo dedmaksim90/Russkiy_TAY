@@ -25,7 +25,7 @@ if not BOT_TOKEN:
     raise ValueError("❌ Токен не найден! Добавьте BOT_TOKEN в переменные окружения Bothost.")
 
 ADMIN_ID = 439446887
-CHANNEL_ID = "@test_shop654"
+CHANNEL_ID = "@RusskiyTAY"
 DELIVERY_COST = 300
 FREE_DELIVERY_THRESHOLD = 2000
 PICKUP_ADDRESS = "Нижний Новгород ул. Профинтерна д.26"
@@ -2550,4 +2550,5 @@ if __name__ == '__main__':
         print("\n🛑 Бот остановлен")
     except Exception as e:
         print(f"❌ Ошибка: {e}")
+
 
